@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "team-utils"
+name = "django-quickstart"
 version = "0.1.0"
-description = "Team Utils for SEEK Dev Team"
+description = "A basic Django project template with essential configurations and a starting template for rapid application development."
 authors = ["thesouldev <sasidharanofficial@gmail.com>"]
 readme = "README.md"
 package-mode = false
@@ -34,22 +34,27 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 79
+target-version = ["py312"]
+include = '\.pyi?$'
 exclude = '''
 /(
     \.git
+  | \.hg
   | \.mypy_cache
   | \.tox
   | \.venv
+  | venv
   | _build
-  | buck-out
   | build
   | dist
+  | migrations
+  | settings\.py
 )/
 '''
-skip-string-normalization = false
 
 [tool.isort]
 profile = "black"
+line_length = 79
 
 [tool.coverage.run]
 omit = ["*/migrations/*"]

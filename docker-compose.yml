@@ -10,7 +10,7 @@ services:
   web:
     build: .
     platform: linux/amd64
-    command: poetry run python manage.py runserver 0.0.0.0:8000
+    command: poetry run python src/manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:

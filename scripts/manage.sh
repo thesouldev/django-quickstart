@@ -1,23 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-GREEN="\033[0;32m"
-CYAN="\033[0;36m"
-RED="\033[0;31m"
-YELLOW="\033[1;33m"
-BOLD="\033[1m"
-RESET="\033[0m"
+# Enable safer script execution
+set -eo pipefail
 
-LOCAL_ENV_SECRET="team-utils-env-local"
-PROD_ENV_SECRET="team-utils-env-prod"
-CLOUD_RUN_SERVICE="asgard-web"
+# Load environment variables from .env file
+if [[ -f ".env" ]]; then
+  set -a
+  source ".env"
+  set +a
+else
+  echo "Error: .env file not found. This file is required."
+  exit 1
+fi
 
+# Colors for output
+readonly GREEN="\033[0;32m"
+readonly CYAN="\033[0;36m"
+readonly RED="\033[0;31m"
+readonly YELLOW="\033[1;33m"
+readonly BOLD="\033[1m"
+readonly RESET="\033[0m"
+
+# Print colored message to stdout
 print_message() {
     local color=$1
     local message=$2
     echo -e "${color}${message}${RESET}"
 }
 
-
+# Set Google Cloud project
 set_gcloud_project() {
     if [[ -z "$project" ]]; then
         print_message "${RED}" "Error: No project args provided. Please set the 'project' variable."
@@ -28,36 +39,39 @@ set_gcloud_project() {
     print_message "${GREEN}" "GCloud Project: $project"
 }
 
-
+# Deploy application via Google Cloud Build
 deploy_app() {
+    # Check for uncommitted changes
     if [[ -n "$(git status --porcelain)" ]]; then
         print_message "${RED}" "There are uncommitted changes in the repository. Please commit or stash them before deploying."
         exit 1
     fi
 
-    BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+    local branch_name=$(git rev-parse --abbrev-ref HEAD)
 
     git fetch origin > /dev/null 2>&1
-    git pull origin "$BRANCH_NAME" > /dev/null 2>&1
+    git pull origin "$branch_name" > /dev/null 2>&1
 
-    LATEST_COMMIT=$(git rev-parse HEAD)
-    LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
+    local latest_commit=$(git rev-parse HEAD)
+    local latest_commit_msg=$(git log -1 --pretty=%B)
 
-    USER_NAME=$(gcloud config get-value account 2> /dev/null)
-    GCLOUD_PROJECT=$(gcloud config get-value project 2> /dev/null)
+    local user_name=$(gcloud config get-value account 2> /dev/null)
+    local gcloud_project=$(gcloud config get-value project 2> /dev/null)
 
-    if [[ -z "$GCLOUD_PROJECT" ]]; then
+    if [[ -z "$gcloud_project" ]]; then
         print_message "${RED}" "No Google Cloud project is set. Please set the project using 'gcloud config set project <PROJECT_ID>'."
         exit 1
     fi
 
+    # Display build summary
     echo -e "\n${BOLD}Build Summary:${RESET}\n"
-    echo -e "Build Initiator:        ${USER_NAME}"
-    echo -e "Branch:                 ${BRANCH_NAME}"
-    echo -e "Commit:                 ${LATEST_COMMIT}"
-    echo -e "Commit Message:         ${LATEST_COMMIT_MSG}"
-    echo -e "Google Cloud Project:   ${GCLOUD_PROJECT}"
+    echo -e "Build Initiator:        ${user_name}"
+    echo -e "Branch:                 ${branch_name}"
+    echo -e "Commit:                 ${latest_commit}"
+    echo -e "Commit Message:         ${latest_commit_msg}"
+    echo -e "Google Cloud Project:   ${gcloud_project}"
 
+    # Ask for confirmation
     echo ""
     print_message "${YELLOW}" "Do you want to proceed with the deployment? (y/n)"
     read -r proceed
@@ -65,9 +79,7 @@ deploy_app() {
     if [[ "$proceed" == "y" || "$proceed" == "Y" ]]; then
         print_message "${RESET}" "Deploying via Cloud Build..."
 
-        gcloud build triggers run "$CLOUD_RUN_SERVICE" --branch="$BRANCH_NAME" --region="asia-south1" > /dev/null 2>&1
-        
-        if [[ $? -eq 0 ]]; then
+        if gcloud build triggers run "$CLOUD_RUN_SERVICE" --branch="$branch_name" --region="asia-south1" > /dev/null 2>&1; then
             print_message "${GREEN}" "Build triggered successfully."
         else
             print_message "${RED}" "Failed to trigger the build."
@@ -79,6 +91,7 @@ deploy_app() {
     fi
 }
 
+# Update environment files from Google Secrets
 update_env() {
     echo -e "${CYAN}${BOLD}Please select the environment you wish to update:${RESET}"
     echo -e "\t${YELLOW}1) ${GREEN}Local${RESET} ${BOLD}(.env.local)${RESET}"
@@ -104,6 +117,7 @@ update_env() {
     esac
 }
 
+# Set environment from Google Secrets
 set_env() {
     if [[ -z "$env" ]]; then
         print_message "${RED}" "Error: No env args provided. Please set the 'env' variable."
@@ -128,14 +142,13 @@ set_env() {
     esac
 }
 
-
-# Main menu to execute the functions
+# Main execution
 case "$1" in
     set-gcloud-project) set_gcloud_project ;;
     deploy) deploy_app ;;
     update-env) update_env ;;
     set-env) set_env ;;
     *)
-        print_message "${RED}" "Usage: $0 {set-gcloud-project|update-env}"
+        print_message "${RED}" "Usage: $0 {set-gcloud-project|deploy|update-env|set-env}"
         exit 1
 esac
