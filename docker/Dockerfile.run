@@ -1,0 +1,31 @@
+FROM python:3.12
+
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y gcc python3-dev libpq-dev
+
+RUN mkdir /app
+
+WORKDIR /app
+
+ENV POETRY_VIRTUALENVS_CREATE=false
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="/root/.local/bin:$PATH"
+
+COPY pyproject.toml poetry.lock* /app/
+
+RUN poetry install --no-dev --no-interaction --no-ansi
+
+COPY . /app/
+
+WORKDIR /app/src
+
+RUN chmod +x /app/entrypoint.sh
+
+RUN poetry run python manage.py collectstatic --noinput
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]

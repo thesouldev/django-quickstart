@@ -1,0 +1,54 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Retrieve Secrets'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Retrieving secrets..."
+        gcloud secrets versions access latest --secret="$_ENV_SECRET_NAME" > .env
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker Image'
+    args: ['build', '-f', 'docker/Dockerfile.run', '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_PREFIX:$COMMIT_SHA', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Docker Image to Container Registry'
+    args: ['push', 'asia-south1-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_PREFIX:$COMMIT_SHA']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Create Revision in Cloud Run'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Deploying to Cloud Run..."
+        gcloud run deploy $_SERVICE_NAME \
+          --image=asia-south1-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_PREFIX:$COMMIT_SHA \
+          --region=asia-south1 \
+          --platform=managed \
+          --revision-suffix=rev-${SHORT_SHA}-${BUILD_ID} \
+          --quiet
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Migrate Traffic to Revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if [ "$_MIGRATE_TRAFFIC" = "true" ]; then
+          echo "Migrating traffic to new revision..."
+          gcloud run services update-traffic $_SERVICE_NAME \
+            --to-revisions=${_SERVICE_NAME}-rev-${SHORT_SHA}-${BUILD_ID}=100 \
+            --region=asia-south1 \
+            --platform=managed \
+            --quiet
+        else
+          echo "Not migrating traffic. Traffic remains on the current revision."
+        fi
+
+images:
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_PREFIX:$COMMIT_SHA'
+
+options:
+  logging: 'CLOUD_LOGGING_ONLY'

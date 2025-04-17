@@ -1,0 +1,14 @@
+{
+  "source_directories": [
+    "src"
+  ],
+  "search_path": [
+    "/root/.cache/pypoetry/virtualenvs/*/lib/python3.12/site-packages"
+  ],
+  "exclude": [
+    "__pycache__",
+    "migrations",
+    "static"
+  ],
+  "strict": false
+}
