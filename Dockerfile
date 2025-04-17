@@ -33,6 +33,7 @@ EXPOSE 8000
 
 RUN chmod +x /app/entrypoint.sh /app/scripts/drop_db.sh
 
-RUN poetry run python src/manage.py collectstatic --noinput
+RUN mkdir -p /app/static
+RUN poetry run python src/manage.py collectstatic --noinput --clear
 
 ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
