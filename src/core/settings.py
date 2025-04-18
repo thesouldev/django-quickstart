@@ -75,6 +75,8 @@ INSTALLED_APPS = [
     "health_check.storage",
     "notification",
     "django_extensions",
+    "django_celery_beat",
+    "django_celery_results",
 ]
 
 REST_FRAMEWORK = {
@@ -226,3 +228,12 @@ LOGGING = {
         },
     },
 }
+
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL", "amqp://guest:guest@rabbitmq:5672/"
+)
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE

@@ -19,5 +19,47 @@ services:
     env_file:
       - .env
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - .env
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+
+  celery:
+    build: .
+    platform: linux/amd64
+    command: poetry run celery -A core worker -l WARNING
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - rabbitmq
+      - web
+    env_file:
+      - .env
+    entrypoint: ["/bin/sh", "/app/scripts/celery-entrypoint.sh"]
+
+  celery-beat:
+    build: .
+    platform: linux/amd64
+    command: poetry run celery -A core beat -l WARNING
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - rabbitmq
+      - web
+    env_file:
+      - .env
+    entrypoint: ["/bin/sh", "/app/scripts/celery-entrypoint.sh"]
+
 volumes:
   postgres_data:
+  rabbitmq_data:

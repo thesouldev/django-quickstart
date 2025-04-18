@@ -12,24 +12,29 @@ run:
 	docker-compose up
 
 format:
-	docker-compose exec web poetry run isort .
-	docker-compose exec web poetry run black .
+	docker-compose run --rm --entrypoint="" web poetry run isort .
+	docker-compose run --rm --entrypoint="" web poetry run black .
 
 lint:
-	docker-compose exec web poetry run flake8 .
+	docker-compose run --rm --entrypoint="" web poetry run flake8 .
 
 type-check:
-	docker-compose exec web poetry run pyre check
+	docker-compose run --rm --entrypoint="" web poetry run pyre check
 
 dropdb:
-	docker-compose exec db /scripts/drop_db.sh
+	docker-compose run --rm --entrypoint="" db /scripts/drop_db.sh
 
-migrate:
-	docker-compose exec web poetry run python manage.py migrate
+db-migrate:
+	docker-compose run --rm --entrypoint="" web poetry run python src/manage.py migrate
 
-makemigrations:
-	docker-compose exec web poetry run python manage.py makemigrations
+db-generate:
+	docker-compose run --rm --entrypoint="" web poetry run python src/manage.py makemigrations
 
+shell:
+	docker-compose run --rm --entrypoint="" web poetry run python src/manage.py shell_plus
+
+down:
+	docker-compose down -v
 update-env:
 	@bash scripts/manage.sh update-env
 
@@ -40,6 +45,6 @@ deploy:
 	@bash scripts/manage.sh deploy
 
 coverage:
-	docker-compose exec web poetry run coverage run ./manage.py test
-	docker-compose exec web poetry run coverage report
-	docker-compose exec web poetry run coverage html
+	docker-compose run --rm --entrypoint="" web poetry run coverage run ./src/manage.py test
+	docker-compose run --rm --entrypoint="" web poetry run coverage report
+	docker-compose run --rm --entrypoint="" web poetry run coverage html

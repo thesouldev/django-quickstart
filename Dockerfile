@@ -31,7 +31,7 @@ COPY . .
 
 EXPOSE 8000
 
-RUN chmod +x /app/entrypoint.sh /app/scripts/drop_db.sh
+RUN chmod +x /app/entrypoint.sh /app/scripts/drop_db.sh /app/scripts/celery-entrypoint.sh
 
 RUN mkdir -p /app/static
 RUN poetry run python src/manage.py collectstatic --noinput --clear
